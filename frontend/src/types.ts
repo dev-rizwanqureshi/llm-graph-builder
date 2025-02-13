@@ -216,6 +216,7 @@ export interface ChunkDetail {
 }
 export type ResponseMode = {
   message: string;
+  file?: string;
   sources?: string[];
   model?: string;
   total_tokens?: number;

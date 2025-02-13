@@ -60,6 +60,7 @@ const Chatbot: FC<ChatbotProps> = (props) => {
     isDeleteChatLoading,
   } = props;
   const [inputMessage, setInputMessage] = useState('');
+  const [inputFile, setInputFile] = useState<File | null>(null);
   const [loading, setLoading] = useState<boolean>(isLoading);
   const { model, chatModes, selectedRows, filesData } = useFileContext();
   const messagesEndRef = useRef<HTMLDivElement>(null);
@@ -102,6 +103,27 @@ const Chatbot: FC<ChatbotProps> = (props) => {
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     setInputMessage(e.target.value);
+  };
+
+  const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    console.log('file uploading')
+    console.dir(e.target.files);
+    if (e.target.files && e.target.files.length > 0) {
+      setInputFile(e.target.files[0]);
+
+      console.dir(inputFile);
+
+
+    }
+  };
+
+  useEffect(() => {
+    console.log('Updated inputFile:', inputFile);
+  }, [inputFile]);
+
+
+  const removeFile = () => {
+    setInputFile(null); // Reset file state
   };
 
   const saveInfoEntitites = (entities: Entity[]) => {
@@ -185,9 +207,12 @@ const Chatbot: FC<ChatbotProps> = (props) => {
 
   const handleSubmit = async (e: { preventDefault: () => void }) => {
     e.preventDefault();
-    if (!inputMessage.trim()) {
+
+    if (!inputMessage.trim() && !inputFile) {
       return;
     }
+
+
     const datetime = getDateTime();
     const userMessage: Messages = {
       id: Date.now(),
@@ -196,7 +221,7 @@ const Chatbot: FC<ChatbotProps> = (props) => {
       currentMode: chatModes[0],
       modes: {},
     };
-    userMessage.modes[chatModes[0]] = { message: inputMessage };
+    userMessage.modes[chatModes[0]] = { message: inputMessage, file: inputFile?.name };
     setListMessages([...listMessages, userMessage]);
     const chatbotMessageId = Date.now() + 1;
     const chatbotMessage: Messages = {
@@ -216,10 +241,15 @@ const Chatbot: FC<ChatbotProps> = (props) => {
           sessionId,
           model,
           mode,
-          selectedFileNames?.map((f) => f.name)
+          selectedFileNames?.map((f) => f.name),
+          inputFile
         )
       );
+
+
+
       setInputMessage('');
+      setInputFile(null);
       const results = await Promise.allSettled(apiCalls);
       results.forEach((result, index) => {
         const mode = chatModes[index];
@@ -547,41 +577,78 @@ const Chatbot: FC<ChatbotProps> = (props) => {
       </div>
       <div className='n-bg-palette-neutral-bg-weak flex gap-2.5 bottom-0 p-2.5 w-full'>
         <form onSubmit={handleSubmit} className={`flex gap-2.5 w-full ${!isFullScreen ? 'justify-between' : ''}`}>
-          <TextInput
-            className={`n-bg-palette-neutral-bg-default flex-grow-7 ${
-              isFullScreen ? 'w-[calc(100%-105px)]' : 'w-[70%]'
-            }`}
-            value={inputMessage}
-            isFluid
-            onChange={handleInputChange}
-            htmlAttributes={{
-              type: 'text',
-              'aria-label': 'chatbot-input',
-              name: 'chatbot-input',
-            }}
-          />
+          <div className={`flex-1 relative`}>
+
+
+            <TextInput
+                className={`n-bg-palette-neutral-bg-default flex-grow-7`}
+                value={inputMessage}
+                isFluid
+                onChange={handleInputChange}
+                htmlAttributes={{
+                  type: 'text',
+                  'aria-label': 'chatbot-input',
+                  name: 'chatbot-input',
+                }}
+            />
+
+            <input
+                type="file"
+                id="file-upload"
+                accept=".pdf,.txt"
+                className="hidden"
+                onChange={handleFileUpload}
+            />
+
+            {!inputFile && (
+                <label
+                    htmlFor="file-upload"
+                    className="absolute right-3 top-1/2 transform -translate-y-1/2 cursor-pointer"
+                >
+                  📎
+                </label>
+            )}
+
+
+            {inputFile && (
+                <div className="flex items-center space-x-2 absolute right-3 top-1/2 transform -translate-y-1/2 cursor-pointer p-1 border rounded-md" style={{ borderColor: "rgb(var(--theme-palette-neutral-border-strong))" }}>
+                  <span className="text-xs text-gray-700 max-w-[100px] truncate" title={inputFile.name}>
+                    {inputFile.name}
+                  </span>
+                  <button
+                      onClick={removeFile}
+                      className="text-red-500 hover:text-red-700 text-xs"
+                  >
+                    ❌
+                  </button>
+                </div>
+            )}
+
+
+          </div>
+
           <ButtonWithToolTip
-            label='Q&A Button'
-            placement='top'
-            text={`Ask a question.`}
-            type='submit'
-            disabled={loading || !connectionStatus}
-            size='medium'
+              label='Q&A Button'
+              placement='top'
+              text={`Ask a question.`}
+              type='submit'
+              disabled={loading || !connectionStatus}
+              size='medium'
           >
             {buttonCaptions.ask}{' '}
             {selectedFileNames != undefined && selectedFileNames.length > 0 && `(${selectedFileNames.length})`}
           </ButtonWithToolTip>
         </form>
       </div>
-      <Suspense fallback={<FallBackDialog />}>
+      <Suspense fallback={<FallBackDialog/>}>
         <Modal
-          modalProps={{
-            id: 'retrieval-information',
-            className: 'n-p-token-4 n-bg-palette-neutral-bg-weak n-rounded-lg',
-          }}
-          onClose={() => setShowInfoModal(false)}
-          isOpen={showInfoModal}
-          size={'large'}
+            modalProps={{
+              id: 'retrieval-information',
+              className: 'n-p-token-4 n-bg-palette-neutral-bg-weak n-rounded-lg',
+            }}
+            onClose={() => setShowInfoModal(false)}
+            isOpen={showInfoModal}
+            size={'large'}
         >
           <div style={{ display: 'flex', justifyContent: 'flex-end', alignItems: 'center' }}>
             <IconButton

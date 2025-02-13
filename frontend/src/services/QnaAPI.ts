@@ -2,11 +2,12 @@ import { UserCredentials } from '../types';
 import api from '../API/Index';
 
 export const chatBotAPI = async (
-  question: string,
-  session_id: string,
-  model: string,
-  mode: string,
-  document_names?: (string | undefined)[]
+    question: string,
+    session_id: string,
+    model: string,
+    mode: string,
+    document_names?: any[] | undefined,
+    file?: File | null
 ) => {
   try {
     const formData = new FormData();
@@ -15,6 +16,9 @@ export const chatBotAPI = async (
     formData.append('model', model);
     formData.append('mode', mode);
     formData.append('document_names', JSON.stringify(document_names));
+    if (file) {
+      formData.append('file', file);
+    }
     const startTime = Date.now();
     const response = await api.post(`/chat_bot`, formData, {
       headers: {
